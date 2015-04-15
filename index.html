@@ -5,17 +5,20 @@
   <title>Web Painter</title>
   <script src="js/require.js"></script>
   <script src="js/zrender.js"></script>
+  <script src="js/jquery-1.11.2.js"></script>
 </head>
 <body>
+  <input type="button" value="pointer" id="pointer"/>
   <input type="button" value="line" id="line"/>
-  <input type="button" value="curve" />
+  <input type="button" value="curve" id="curve" />
   <div id="main" style="width:100%;height:500px;border:1px solid #ccc"></div>
 </body>
 <script type="text/javascript">
 require.config({
   paths:{
-    zrender:'./js/zrender',
-    'zrender/shape/Circle' : './js/zrender'
+    zrender : './js/zrender',
+    'zrender/shape/Circle' : './js/zrender',
+    'zrender/shape/Line' : './js/zrender',
   }
 });
 
@@ -25,26 +28,43 @@ require(
   ['zrender','zrender/shape/Circle','zrender/shape/Line', 'zrender/shape/BezierCurve'],
   function(zrender) {
     var zr = zrender.init(document.getElementById('main'));
+    var Circle = require('zrender/shape/Circle');
+    var Line = require('zrender/shape/Line');
+    var Curve = require('zrender/shape/BezierCurve');
 
-    function drawFunction(params){
-      p_end.style.x = params.event.offsetX;
-      p_end.style.y = params.event.offsetY;
-      zr.modShape(p_end);
-      down_line.style.xEnd = p_end.style.x
-      down_line.style.yEnd = p_end.style.y
-      zr.modShape(down_line);
+    var draggingPointStyle = {
+      r : 5,
+      color : "white",
+      brushType : "both",
+      strokeColor : "black",
+      lineWidth : 1
+    };
+
+    var location =  {
+      x : 1,
+      y : 1
     }
 
-    var drawingFlag = false;
-    var p_start;
-    var p_end;
-    var down_line;
-    document.getElementById('line').click(function(){
-      zr.on('mousedown', function(params){
+    var temp = $.extend(draggingPointStyle,location);
+
+    function LineBuilder(){
+      var _this = this;
+      function drawFunction(params){
+        _this.p_end.style.x = params.event.offsetX;
+        _this.p_end.style.y = params.event.offsetY;
+        zr.modShape(_this.p_end);
+        _this.newLine.style.xEnd = _this.p_end.style.x;
+        _this.newLine.style.yEnd = _this.p_end.style.y;
+        zr.modShape(_this.newLine);
+      }
+
+      var drawingFlag = false;
+
+      function drawLine(params){
         drawingFlag = true;
         zr.on('mousemove', drawFunction);
 
-        p_start = new Circle({
+        _this.p_start = new Circle({
           style: {
             x : params.event.offsetX,
             y : params.event.offsetY,
@@ -53,11 +73,26 @@ require(
             brushType : "both",
             strokeColor : "black",
             lineWidth : 1
+          },
+          clickable: true,
+          onmousedown: function(params){
+            zr.on('mousemove', function(params){
+              var targetX = params.event.offsetX;
+              var targetY = params.event.offsetY;
+              _this.p_start.style.x = targetX
+              _this.p_start.style.y = targetY
+              zr.modShape(_this.p_start)
+              _this.newLine.style.xStart = targetX
+              _this.newLine.style.yStart = targetY;
+              zr.modShape(_this.newLine)
+            });
+          },
+          onmouseup : function(params){
+            onmousemove = null;
           }
         });
-        zr.addShape(p_start);
 
-        p_end = new Circle({
+        _this.p_end = new Circle({
           style: {
             x : params.event.offsetX,
             y : params.event.offsetY,
@@ -66,251 +101,256 @@ require(
             brushType : "both",
             strokeColor : "black",
             lineWidth : 1
+          },
+          onmousedown: function(params){
+            zr.on('mousemove', function(params){
+              var targetX = params.event.offsetX;
+              var targetY = params.event.offsetY;
+              _this.p_end.style.x = targetX
+              _this.p_end.style.y = targetY
+              zr.modShape(_this.p_end)
+              _this.newLine.style.xEnd = targetX
+              _this.newLine.style.yEnd = targetY;
+              zr.modShape(_this.newLine)
+            });
+          },
+          onmouseup : function(params){
+            onmousemove = null;
           }
         });
-        zr.addShape(p_end);
 
-        down_line = new Line({
+        _this.newLine = new Line({
           style: {
-            xStart: p_start.style.x,
-            yStart: p_start.style.y,
-            xEnd: p_end.style.x,
-            yEnd: p_end.style.y,
+            xStart: _this.p_start.style.x,
+            yStart: _this.p_start.style.y,
+            xEnd: _this.p_end.style.x,
+            yEnd: _this.p_end.style.y,
             strokeColor: 'black',
             lineWidth: 2
+          },
+          clickable: true,
+          draggable: true,
+          onmousedown: function(params){
+            var _this = this;
+            onmousemove = function(mme){
+
+            }
+          },
+          onclick: function(params){
+
+          },
+          ondblclick: function(params){
+            // var targetX = params.event.offsetX;
+            // var targetY = params.event.offsetY;
+            // var p_new = new Circle({
+            //   style: {
+            //     x : targetX,
+            //     y : targetY,
+            //     r : 5,
+            //     color : "white",
+            //     brushType : "both",
+            //     strokeColor : "black",
+            //     lineWidth : 1,
+            //     draggable: true
+            //   }
+            // });
+            // zr.addShape(p_new);
+            // var originalX = this.style.xEnd;
+            // var originalY = this.style.yEnd;
+            // this.style.xEnd = targetX;
+            // this.style.yEnd = targetY;
+            // zr.modShape(this);
+            //
+            // var p_half = new Line({
+            //   style: {
+            //     xStart: originalX,
+            //     yStart: originalY,
+            //     xEnd: targetX,
+            //     yEnd: targetY,
+            //     strokeColor: 'black',
+            //     lineWidth: 2
+            //   }
+            // });
+            // zr.addShape(p_half)
           }
         });
-        zr.addShape(down_line);
+        zr.addShape(_this.newLine);
+        zr.addShape(_this.p_start);
+        zr.addShape(_this.p_end);
+      }
 
+      return {
+        drawLine : drawLine,
+        drawFunction : drawFunction
+      }
+    };
+
+    $('#line').click(function(){
+      var lineBuilder;
+      zr.on('mousedown', function(params){
+        lineBuilder = new LineBuilder();
+        lineBuilder.drawLine(params);
+      });
+      zr.on('mouseup', function(){
+        drawingFlag = false;
+        zr.un('mousemove');
+      });
+      $('#pointer').click(function(){
+        zr.un('mousedown');
       });
     });
 
-    zr.on('mouseup', function(){
-      drawingFlag = false;
-      zr.un('mousemove', drawFunction);
-    })
 
-    var start = {
-      x : 20,
-      y : 80
-    }
-    var end = {
-      x : 100,
-      y : 100
-    }
-
-    // Line
-    var Line = require('zrender/shape/Line');
-    var line1 = new Line({
-      style: {
-        xStart: start.x,
-        yStart: start.y,
-        xEnd: end.x,
-        yEnd: end.y,
-        strokeColor: '#000',
-        lineWidth: 2
-      },
-      clickable: true,
-      draggable: true,
-      ondblclick: function(params){
-        var event = params.event;
-        line1.style.xEnd = event.offsetX;
-        line1.style.yEnd = event.offsetY;
-        zr.modShape(line1);
-      }
-    });
-    zr.addShape(line1);
-
-    function generateEdgePoint(edge){
-      return edgePoint = {
-        style: {
-          x : edge.x,
-          y : edge.y,
-          r : 5,
-          color : "white",
-          brushType : "both",
-          strokeColor : "black",
-          lineWidth : 1
-        },
-        // draggable:true,
-        onmousedown: function(params){
-          var _this = this;
-          onmousemove = function(mme){
-            var targetX = mme.offsetX;
-            var targetY = mme.offsetY;
-            _this.style.x = targetX
-            _this.style.y = targetY
-            zr.modShape(startCircle)
-            line1.style.xStart = targetX
-            line1.style.yStart = targetY;
-            zr.modShape(line1)
-          }
-        },
-        onmouseup : function(params){
-          onmousemove = null;
-        }
-      }
-    }
-
-    var Circle = require('zrender/shape/Circle');
-    var startCircle = new Circle(generateEdgePoint(start))
-    zr.addShape(startCircle);
-
-    var endCircle = new Circle(generateEdgePoint(end))
-    zr.addShape(endCircle);
-
-    var Curve = require('zrender/shape/BezierCurve');
-
-
-    var p1 = new Circle({
-      style: {
-        x : 100,
-        y : 20,
-        r : 5,
-        color : "white",
-        brushType : "both",
-        strokeColor : "black",
-        lineWidth : 1
-      }
-    });
-    zr.addShape(p1);
-    var p2 = new Circle({
-      style: {
-        x : 200,
-        y : 20,
-        r : 5,
-        color : "white",
-        brushType : "both",
-        strokeColor : "black",
-        lineWidth : 1
-      }
-    });
-    zr.addShape(p2);
-
-    var cp = new Circle({
-      style:{
-        x : 150,
-        y : 100,
-        r : 5,
-        color : "white",
-        brushType : "both",
-        strokeColor : "black",
-        lineWidth : 1
-      },
-      draggable: true,
-      onmousedown: function(params){
-        var CP1OffsetX = cp1.style.x - cp.style.x;
-        var CP1OffsetY = cp1.style.y - cp.style.y;
-        var _this = this;
-        onmousemove = function(mme){
-          var targetX = mme.offsetX;
-          var targetY = mme.offsetY;
-          cp1.style.x = targetX + CP1OffsetX;
-          cp1.style.y = targetY + CP1OffsetY;
-          zr.modShape(cp1);
-          curve1.style.cpX1 = cp1.style.x
-          curve1.style.cpY1 = cp1.style.y
-          curve1.style.xEnd = targetX
-          curve1.style.yEnd = targetY
-          zr.modShape(line1)
-        }
-      },
-      onmouseup : function(params){
-        onmousemove = null;
-      }
-    })
-    zr.addShape(cp);
-
-    var cp1 = new Circle({
-      style:{
-        x : 120,
-        y : 100,
-        r : 5,
-        color : "white",
-        brushType : "both",
-        strokeColor : "black",
-        lineWidth : 1
-      },
-      draggable: true,
-      onmousedown: function(params){
-        var _this = this;
-        onmousemove = function(mme){
-          var targetX = mme.offsetX;
-          var targetY = mme.offsetY;
-          curve1.style.cpX1 = targetX
-          curve1.style.cpY1 = targetY;
-          zr.modShape(line1)
-        }
-      },
-      onmouseup : function(params){
-        onmousemove = null;
-      }
-    })
-    zr.addShape(cp1);
-    var cp2 = new Circle({
-      style: {
-        x : 180,
-        y : 100,
-        r : 5,
-        color : "white",
-        brushType : "both",
-        strokeColor : "black",
-        lineWidth : 1
-      }
-    });
-    zr.addShape(cp2);
-
-    var lineCPCP1 = new Line({
-      style: {
-        xStart: cp.style.x,
-        yStart: cp.style.y,
-        xEnd: cp1.style.x,
-        yEnd: cp1.style.y,
-        strokeColor: 'black',
-        lineWidth: 2
-      }
-    });
-    zr.addShape(lineCPCP1)
-
-    var lineCPCP2 = new Line({
-      style: {
-        xStart: cp.style.x,
-        yStart: cp.style.y,
-        xEnd: cp2.style.x,
-        yEnd: cp2.style.y,
-        strokeColor: 'black',
-        lineWidth: 2
-      }
-    });
-    zr.addShape(lineCPCP2)
-
-    var curve1 = new Curve({
-      style : {
-        xStart : p1.style.x,
-        yStart : p1.style.y,
-        cpX1 : cp1.style.x,
-        cpY1 : cp1.style.y,
-        xEnd : cp.style.x,
-        yEnd : cp.style.y,
-        strokeColor : "black",
-        lineWidth : 2,
-      }
-    });
-    zr.addShape(curve1);
-
-    var curve2 = new Curve({
-      style : {
-        xStart : cp.style.x,
-        yStart : cp.style.y,
-        cpX1 : cp2.style.x,
-        cpY1 : cp2.style.y,
-        xEnd : p2.style.x,
-        yEnd : p2.style.y,
-        strokeColor : "black",
-        lineWidth : 2,
-      }
-    });
-    zr.addShape(curve2);
+// ========= curve ==========
+    // var p1 = new Circle({
+    //   style: {
+    //     x : 100,
+    //     y : 20,
+    //     r : 5,
+    //     color : "white",
+    //     brushType : "both",
+    //     strokeColor : "black",
+    //     lineWidth : 1
+    //   }
+    // });
+    // zr.addShape(p1);
+    // var p2 = new Circle({
+    //   style: {
+    //     x : 200,
+    //     y : 20,
+    //     r : 5,
+    //     color : "white",
+    //     brushType : "both",
+    //     strokeColor : "black",
+    //     lineWidth : 1
+    //   }
+    // });
+    // zr.addShape(p2);
+    //
+    // var cp = new Circle({
+    //   style:{
+    //     x : 150,
+    //     y : 100,
+    //     r : 5,
+    //     color : "white",
+    //     brushType : "both",
+    //     strokeColor : "black",
+    //     lineWidth : 1
+    //   },
+    //   draggable: true,
+    //   onmousedown: function(params){
+    //     var CP1OffsetX = cp1.style.x - cp.style.x;
+    //     var CP1OffsetY = cp1.style.y - cp.style.y;
+    //     var _this = this;
+    //     onmousemove = function(mme){
+    //       var targetX = mme.offsetX;
+    //       var targetY = mme.offsetY;
+    //       cp1.style.x = targetX + CP1OffsetX;
+    //       cp1.style.y = targetY + CP1OffsetY;
+    //       zr.modShape(cp1);
+    //       curve1.style.cpX1 = cp1.style.x
+    //       curve1.style.cpY1 = cp1.style.y
+    //       curve1.style.xEnd = targetX
+    //       curve1.style.yEnd = targetY
+    //       zr.modShape(line1)
+    //     }
+    //   },
+    //   onmouseup : function(params){
+    //     onmousemove = null;
+    //   }
+    // })
+    // zr.addShape(cp);
+    //
+    // var cp1 = new Circle({
+    //   style:{
+    //     x : 120,
+    //     y : 100,
+    //     r : 5,
+    //     color : "white",
+    //     brushType : "both",
+    //     strokeColor : "black",
+    //     lineWidth : 1
+    //   },
+    //   draggable: true,
+    //   onmousedown: function(params){
+    //     var _this = this;
+    //     onmousemove = function(mme){
+    //       var targetX = mme.offsetX;
+    //       var targetY = mme.offsetY;
+    //       curve1.style.cpX1 = targetX
+    //       curve1.style.cpY1 = targetY;
+    //       zr.modShape(line1)
+    //     }
+    //   },
+    //   onmouseup : function(params){
+    //     onmousemove = null;
+    //   }
+    // })
+    // zr.addShape(cp1);
+    // var cp2 = new Circle({
+    //   style: {
+    //     x : 180,
+    //     y : 100,
+    //     r : 5,
+    //     color : "white",
+    //     brushType : "both",
+    //     strokeColor : "black",
+    //     lineWidth : 1
+    //   }
+    // });
+    // zr.addShape(cp2);
+    //
+    // var lineCPCP1 = new Line({
+    //   style: {
+    //     xStart: cp.style.x,
+    //     yStart: cp.style.y,
+    //     xEnd: cp1.style.x,
+    //     yEnd: cp1.style.y,
+    //     strokeColor: 'black',
+    //     lineWidth: 2
+    //   }
+    // });
+    // zr.addShape(lineCPCP1)
+    //
+    // var lineCPCP2 = new Line({
+    //   style: {
+    //     xStart: cp.style.x,
+    //     yStart: cp.style.y,
+    //     xEnd: cp2.style.x,
+    //     yEnd: cp2.style.y,
+    //     strokeColor: 'black',
+    //     lineWidth: 2
+    //   }
+    // });
+    // zr.addShape(lineCPCP2)
+    //
+    // var curve1 = new Curve({
+    //   style : {
+    //     xStart : p1.style.x,
+    //     yStart : p1.style.y,
+    //     cpX1 : cp1.style.x,
+    //     cpY1 : cp1.style.y,
+    //     xEnd : cp.style.x,
+    //     yEnd : cp.style.y,
+    //     strokeColor : "black",
+    //     lineWidth : 2,
+    //   }
+    // });
+    // zr.addShape(curve1);
+    //
+    // var curve2 = new Curve({
+    //   style : {
+    //     xStart : cp.style.x,
+    //     yStart : cp.style.y,
+    //     cpX1 : cp2.style.x,
+    //     cpY1 : cp2.style.y,
+    //     xEnd : p2.style.x,
+    //     yEnd : p2.style.y,
+    //     strokeColor : "black",
+    //     lineWidth : 2,
+    //   }
+    // });
+    // zr.addShape(curve2);
   });
 </script>
 </html>
