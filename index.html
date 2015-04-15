@@ -6,6 +6,7 @@
   <script src="js/require.js"></script>
   <script src="js/zrender.js"></script>
   <script src="js/jquery-1.11.2.js"></script>
+  <script src="js/triangle.js"></script>
 </head>
 <body>
   <input type="button" value="pointer" id="pointer"/>
@@ -47,9 +48,12 @@ require(
 
     var temp = $.extend(draggingPointStyle,location);
 
-    function LineBuilder(){
+    function EditableLine(){
+      var p_start;
+      var p_end;
+
       var _this = this;
-      function drawFunction(params){
+      var drawFunction = function(params){
         _this.p_end.style.x = params.event.offsetX;
         _this.p_end.style.y = params.event.offsetY;
         zr.modShape(_this.p_end);
@@ -60,7 +64,7 @@ require(
 
       var drawingFlag = false;
 
-      function drawLine(params){
+      var drawLine = function(params){
         drawingFlag = true;
         zr.on('mousemove', drawFunction);
 
@@ -119,61 +123,119 @@ require(
           }
         });
 
-        _this.newLine = new Line({
-          style: {
+        var newLineStyle = {
+          clickable: true,
+          // draggable: true,
+          onclick: function(params){
+
+          },
+          ondblclick: function(params){
+            var targetX = params.event.offsetX;
+            var targetY = params.event.offsetY;
+            var p_new = new Circle({
+              style: {
+                x : targetX,
+                y : targetY,
+                r : 5,
+                color : "white",
+                brushType : "both",
+                strokeColor : "black",
+                lineWidth : 1
+              },
+              draggable: true,
+              onmousedown: function(params){
+                zr.on('mousemove', function(params){
+                  var targetX = params.event.offsetX;
+                  var targetY = params.event.offsetY;
+                  var offsetX = _this.halfLine.style.xEnd - targetX;
+                  var offsetY = _this.halfLine.style.yEnd - targetY;
+                  p_anchor1.style.x -= offsetX;
+                  p_anchor1.style.y -= offsetY;
+                  zr.modShape(p_anchor1);
+
+                  line_anchor1.style.xEnd = targetX;
+                  line_anchor1.style.yEnd = targetY;
+                  line_anchor1.style.xStart = p_anchor1.style.x;
+                  line_anchor1.style.yStart = p_anchor1.style.y;
+
+                  _this.halfLine.style.cpX1 = p_anchor1.style.x;
+                  _this.halfLine.style.cpY1 = p_anchor1.style.y;
+                  _this.halfLine.style.xEnd = targetX
+                  _this.halfLine.style.yEnd = targetY
+                  zr.modShape(_this.halfLine)
+                  _this.newLine.style.xEnd = targetX
+                  _this.newLine.style.yEnd = targetY;
+                  zr.modShape(_this.newLine)
+                });
+              }
+            });
+
+            var originalX = this.style.xEnd;
+            var originalY = this.style.yEnd;
+
+            var anchor1 = Triangle.findAnchor(p_new.style.x, p_new.style.y, originalX, originalY, 50);
+            var p_anchor1 = new Circle({
+              style: {
+                x : anchor1.x,
+                y : anchor1.y,
+                r : 5,
+                color : "white",
+                brushType : "both",
+                strokeColor : "black",
+                lineWidth : 1
+              },
+            });
+
+            var line_anchor1 = new Line({
+              style:{
+                xStart: p_anchor1.style.x,
+                yStart: p_anchor1.style.y,
+                xEnd: p_new.style.x,
+                yEnd: p_new.style.y,
+                strokeColor: 'black',
+                lineWidth: 2
+              }
+            });
+            zr.addShape(line_anchor1);
+            zr.addShape(p_anchor1);
+
+            this.style.xEnd = targetX;
+            this.style.yEnd = targetY;
+            zr.modShape(this);
+
+            locationOpt = {
+              style: {
+                xStart: originalX,
+                yStart: originalY,
+                cpX1 : anchor1.x,
+                cpY1 : anchor1.y,
+                xEnd: targetX,
+                yEnd: targetY,
+                strokeColor: 'black',
+                lineWidth: 2
+              }
+            }
+
+            var opt = $.extend(locationOpt, newLineStyle);
+            _this.halfLine = new Curve(opt);
+
+            zr.addShape(_this.halfLine);
+            zr.addShape(p_new);
+          }
+        }
+
+        var locationOpt = {
+          style:{
             xStart: _this.p_start.style.x,
             yStart: _this.p_start.style.y,
             xEnd: _this.p_end.style.x,
             yEnd: _this.p_end.style.y,
             strokeColor: 'black',
             lineWidth: 2
-          },
-          clickable: true,
-          draggable: true,
-          onmousedown: function(params){
-            var _this = this;
-            onmousemove = function(mme){
-
-            }
-          },
-          onclick: function(params){
-
-          },
-          ondblclick: function(params){
-            // var targetX = params.event.offsetX;
-            // var targetY = params.event.offsetY;
-            // var p_new = new Circle({
-            //   style: {
-            //     x : targetX,
-            //     y : targetY,
-            //     r : 5,
-            //     color : "white",
-            //     brushType : "both",
-            //     strokeColor : "black",
-            //     lineWidth : 1,
-            //     draggable: true
-            //   }
-            // });
-            // zr.addShape(p_new);
-            // var originalX = this.style.xEnd;
-            // var originalY = this.style.yEnd;
-            // this.style.xEnd = targetX;
-            // this.style.yEnd = targetY;
-            // zr.modShape(this);
-            //
-            // var p_half = new Line({
-            //   style: {
-            //     xStart: originalX,
-            //     yStart: originalY,
-            //     xEnd: targetX,
-            //     yEnd: targetY,
-            //     strokeColor: 'black',
-            //     lineWidth: 2
-            //   }
-            // });
-            // zr.addShape(p_half)
           }
-        });
+        }
+        var opt = $.extend(locationOpt, newLineStyle);
+        _this.newLine = new Line(opt);
         zr.addShape(_this.newLine);
         zr.addShape(_this.p_start);
         zr.addShape(_this.p_end);
@@ -188,11 +250,10 @@ require(
     $('#line').click(function(){
       var lineBuilder;
       zr.on('mousedown', function(params){
-        lineBuilder = new LineBuilder();
-        lineBuilder.drawLine(params);
+        editableLine = new EditableLine();
+        editableLine.drawLine(params);
       });
       zr.on('mouseup', function(){
-        drawingFlag = false;
         zr.un('mousemove');
       });
       $('#pointer').click(function(){
