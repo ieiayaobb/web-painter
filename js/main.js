@@ -4,21 +4,25 @@
 require.config({
     paths:{
         'zrender' : 'zrender',
-        'zrender/shape/Circle' : 'zrender',
-        'zrender/shape/Line' : 'zrender',
         'zrender/shape/BezierCurve' : 'zrender',
+        'customLine' : 'customLine',
+        'customPoint' : 'customPoint',
+
         'jquery' : 'jquery-1.11.2'
     }
 });
 
 require(
-    ['zrender', 'zrender/shape/Circle', 'zrender/shape/Line', 'zrender/shape/BezierCurve', 'jquery'],
+    [
+        'zrender',
+        'customPoint',
+        'customLine',
+        'zrender/shape/BezierCurve',
+        'jquery'
+    ],
     function(zrender, Circle, Line, BezierCurve, $) {
         var zr = zrender.init(document.getElementById('main'));
         function EditableLine(){
-            var p_start;
-            var p_end;
-
             var _this = this;
             var drawFunction = function(params){
                 _this.p_end.style.x = params.event.offsetX;
@@ -92,14 +96,16 @@ require(
 
                 var newLineStyle = {
                     clickable: true,
-                    // draggable: true,
-                    onclick: function(params){
-
-                    },
                     ondblclick: function(params){
+                        var _this = this;
                         var targetX = params.event.offsetX;
                         var targetY = params.event.offsetY;
-                        var p_new = new Circle({
+
+                        //remove original line
+                        zr.delShape(_this.newLine)
+
+                        // new point at your mouse position
+                        this.p_new = new Circle({
                             style: {
                                 x : targetX,
                                 y : targetY,
@@ -112,39 +118,53 @@ require(
                             draggable: true,
                             onmousedown: function(params){
                                 zr.on('mousemove', function(params){
-                                    var targetX = params.event.offsetX;
-                                    var targetY = params.event.offsetY;
-                                    var offsetX = halfLine.style.xEnd - targetX;
-                                    var offsetY = halfLine.style.yEnd - targetY;
-                                    p_anchor1.style.x -= offsetX;
-                                    p_anchor1.style.y -= offsetY;
-                                    zr.modShape(p_anchor1);
 
-                                    line_anchor1.style.xEnd = targetX;
-                                    line_anchor1.style.yEnd = targetY;
-                                    line_anchor1.style.xStart = p_anchor1.style.x;
-                                    line_anchor1.style.yStart = p_anchor1.style.y;
+                                    // mouse position
+                                    this.targetX = params.event.offsetX;
+                                    this.targetY = params.event.offsetY;
 
-                                    halfLine.style.cpX1 = p_anchor1.style.x;
-                                    halfLine.style.cpY1 = p_anchor1.style.y;
-                                    halfLine.style.xEnd = targetX
-                                    halfLine.style.yEnd = targetY
+                                    // calculate offset
+                                    this.offsetX = _this.halfLine1.style.xEnd - this.targetX;
+                                    this.offsetY = _this.halfLine1.style.yEnd - this.targetY;
 
-                                    _this.newLine.style.xEnd = targetX
-                                    _this.newLine.style.yEnd = targetY;
+                                    // set anchor1
+                                    _this.p_anchor1.style.x -= this.offsetX;
+                                    _this.p_anchor1.style.y -= this.offsetY;
+                                    zr.modShape(_this.p_anchor1);
 
+                                    _this.line_anchor1.style.xEnd = this.targetX;
+                                    _this.line_anchor1.style.yEnd = this.targetY;
+                                    _this.line_anchor1.style.xStart = _this.p_anchor1.style.x;
+                                    _this.line_anchor1.style.yStart = _this.p_anchor1.style.y;
+
+                                    _this.halfLine1.style.cpX1 = _this.p_anchor1.style.x;
+                                    _this.halfLine1.style.cpY1 = _this.p_anchor1.style.y;
+                                    _this.halfLine1.style.xEnd = this.targetX
+                                    _this.halfLine1.style.yEnd = this.targetY
+
+                                    // set anchor1
+                                    _this.p_anchor2.style.x -= this.offsetX;
+                                    _this.p_anchor2.style.y -= this.offsetY;
+                                    zr.modShape(_this.p_anchor2);
+
+                                    _this.line_anchor2.style.xEnd = this.targetX;
+                                    _this.line_anchor2.style.yEnd = this.targetY;
+                                    _this.line_anchor2.style.xStart = _this.p_anchor2.style.x;
+                                    _this.line_anchor2.style.yStart = _this.p_anchor2.style.y;
+
+                                    _this.halfLine2.style.cpX1 = _this.p_anchor2.style.x;
+                                    _this.halfLine2.style.cpY1 = _this.p_anchor2.style.y;
+                                    _this.halfLine2.style.xEnd = this.targetX
+                                    _this.halfLine2.style.yEnd = this.targetY
                                 });
                             }
                         });
 
-                        var originalX = this.style.xEnd;
-                        var originalY = this.style.yEnd;
-
-                        var anchor1 = Triangle.findAnchor(p_new.style.x, p_new.style.y, originalX, originalY, 50);
-                        var p_anchor1 = new Circle({
+                        this.anchor1 = Triangle.findAnchor(this.p_new.style.x, this.p_new.style.y, this.style.xEnd, this.style.yEnd, 50);
+                        this.p_anchor1 = new Circle({
                             style: {
-                                x : anchor1.x,
-                                y : anchor1.y,
+                                x : this.anchor1.x,
+                                y : this.anchor1.y,
                                 r : 5,
                                 color : "white",
                                 brushType : "both",
@@ -153,34 +173,79 @@ require(
                             },
                         });
 
-                        var line_anchor1 = new Line({
+                        this.line_anchor1 = new Line({
                             style:{
-                                xStart: p_anchor1.style.x,
-                                yStart: p_anchor1.style.y,
-                                xEnd: p_new.style.x,
-                                yEnd: p_new.style.y,
+                                xStart: this.p_anchor1.style.x,
+                                yStart: this.p_anchor1.style.y,
+                                xEnd: this.p_new.style.x,
+                                yEnd: this.p_new.style.y,
                                 strokeColor: 'black',
                                 lineWidth: 2
                             }
                         });
-                        zr.addShape(line_anchor1);
-                        zr.addShape(p_anchor1);
+                        zr.addShape(this.line_anchor1);
+                        zr.addShape(this.p_anchor1);
 
-                        var halfLine = new BezierCurve($.extend({
+
+                        // new to end
+                        this.halfLine1 = new BezierCurve($.extend({
                             style: {
-                                xStart: originalX,
-                                yStart: originalY,
-                                cpX1 : anchor1.x,
-                                cpY1 : anchor1.y,
-                                xEnd: targetX,
-                                yEnd: targetY,
+                                xStart: this.style.xEnd,
+                                yStart: this.style.yEnd,
+                                cpX1 : this.anchor1.x,
+                                cpY1 : this.anchor1.y,
+                                xEnd: this.targetX,
+                                yEnd: this.targetY,
+                                strokeColor: 'black',
+                                lineWidth: 3,
+                            }
+                        }, newLineStyle));
+                        zr.addShape(this.halfLine1);
+
+
+                        this.anchor2 = Triangle.findAnchor(this.p_new.style.x, this.p_new.style.y, this.style.xStart, this.style.yStart, -50);
+                        this.p_anchor2 = new Circle({
+                            style: {
+                                x : this.anchor2.x,
+                                y : this.anchor2.y,
+                                r : 5,
+                                color : "white",
+                                brushType : "both",
+                                strokeColor : "black",
+                                lineWidth : 1
+                            },
+                        });
+
+                        this.line_anchor2 = new Line({
+                            style:{
+                                xStart: this.p_anchor2.style.x,
+                                yStart: this.p_anchor2.style.y,
+                                xEnd: this.p_new.style.x,
+                                yEnd: this.p_new.style.y,
                                 strokeColor: 'black',
                                 lineWidth: 2
                             }
-                        }, newLineStyle));
+                        });
+                        zr.addShape(this.line_anchor2);
+                        zr.addShape(this.p_anchor2);
 
-                        zr.addShape(halfLine);
-                        zr.addShape(p_new);
+                        // start to new
+
+                        this.halfLine2 = new BezierCurve($.extend({
+                            style: {
+                                xStart: this.style.xStart,
+                                yStart: this.style.yStart,
+                                cpX1 : this.anchor2.x,
+                                cpY1 : this.anchor2.y,
+                                xEnd: this.targetX,
+                                yEnd: this.targetY,
+                                strokeColor: 'black',
+                                lineWidth: 3,
+                            }
+                        }, newLineStyle));
+                        zr.addShape(this.halfLine2);
+
+                        zr.addShape(this.p_new);
                     }
                 }
 
