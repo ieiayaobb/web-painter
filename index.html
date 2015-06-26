@@ -5,12 +5,19 @@
   <title>Web Painter</title>
   <script src="js/require.js" data-main="js/main" defer async="true"></script>
   <script src="js/triangle.js"></script>
+  <style>
+    #main{
+      width:100%;
+      height:500px;
+      border:1px solid #ccc;
+    }
+  </style>
 </head>
 <body>
   <input type="button" value="pointer" id="pointer"/>
   <input type="button" value="line" id="line"/>
   <input type="button" value="circle" id="circle"/>
-  <div id="main" style="width:100%;height:500px;border:1px solid #ccc"></div>
+  <div id="main"></div>
 </body>
 
 </html>
